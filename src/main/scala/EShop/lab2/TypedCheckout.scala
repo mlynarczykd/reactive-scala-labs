@@ -34,16 +34,49 @@ class TypedCheckout {
   val checkoutTimerDuration: FiniteDuration = 1 seconds
   val paymentTimerDuration: FiniteDuration  = 1 seconds
 
-  def start: Behavior[TypedCheckout.Command] = ???
+  def start: Behavior[TypedCheckout.Command] = Behaviors.receive {
+    case (context, StartCheckout) => selectingDelivery(context.scheduleOnce(checkoutTimerDuration, context.self, ExpireCheckout))
+    case (context, message) => context.log.info(s"Received unknown message: $message")
+      Behaviors.same
+  }
 
-  def selectingDelivery(timer: Cancellable): Behavior[TypedCheckout.Command] = ???
+  def selectingDelivery(timer: Cancellable): Behavior[TypedCheckout.Command] = Behaviors.receive {
+    case (_, SelectDeliveryMethod(_)) => selectingPaymentMethod(timer)
+    case (_, ExpireCheckout) => cancelled
+    case (_, CancelCheckout) => timer.cancel()
+      cancelled
+    case (context, message) => context.log.info(s"Received unknown message: $message")
+      Behaviors.same
+  }
 
-  def selectingPaymentMethod(timer: Cancellable): Behavior[TypedCheckout.Command] = ???
+  def selectingPaymentMethod(timer: Cancellable): Behavior[TypedCheckout.Command] = Behaviors.receive {
+    case (context, SelectPayment(_)) => timer.cancel()
+      processingPayment(context.scheduleOnce(paymentTimerDuration, context.self, ExpirePayment))
+    case (_, ExpireCheckout) => cancelled
+    case (_, CancelCheckout) => timer.cancel()
+      cancelled
+    case (context, message) => context.log.info(s"Received unknown message: $message")
+      Behaviors.same
+  }
 
-  def processingPayment(timer: Cancellable): Behavior[TypedCheckout.Command] = ???
+  def processingPayment(timer: Cancellable): Behavior[TypedCheckout.Command] = Behaviors.receive {
+    case (_, ConfirmPaymentReceived) => timer.cancel()
+      closed
+    case (_, ExpirePayment) => cancelled
+    case (_, CancelCheckout) => timer.cancel()
+      cancelled
+    case (context, message) => context.log.info(s"Received unknown message: $message")
+      Behaviors.same
+  }
 
-  def cancelled: Behavior[TypedCheckout.Command] = ???
+  def cancelled: Behavior[TypedCheckout.Command] = Behaviors.receive {
+    case (context, message) => context.log.info(s"Received unknown message: $message")
+      Behaviors.stopped
+  }
 
-  def closed: Behavior[TypedCheckout.Command] = ???
+  def closed: Behavior[TypedCheckout.Command] = Behaviors.receive {
+    case (context, message) => context.log.info(s"Received unknown message: $message")
+      Behaviors.stopped
+  }
 
 }
