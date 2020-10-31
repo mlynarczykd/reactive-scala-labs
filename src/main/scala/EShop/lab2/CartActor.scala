@@ -15,11 +15,13 @@ object CartActor {
   case object StartCheckout            extends Command
   case object ConfirmCheckoutCancelled extends Command
   case object ConfirmCheckoutClosed    extends Command
+  case object GetItems                 extends Command // command made to make testing easier
 
   sealed trait Event
   case class CheckoutStarted(checkoutRef: ActorRef) extends Event
 
-  def props: Props = Props(new CartActor())
+  def props() = Props(new CartActor())
+
 }
 
 class CartActor extends Actor {
