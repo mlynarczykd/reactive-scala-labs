@@ -45,7 +45,7 @@ class TypedCartTest
 
   it should "start checkout" in {
     val testKit = BehaviorTestKit(new TypedCartActor().start)
-    val inbox = TestInbox[TypedOrderManager.Command]()
+    val inbox = TestInbox[TypedCartActor.Event]()
 
     testKit.run(AddItem(item1))
     testKit.run(StartCheckout(inbox.ref))
@@ -55,7 +55,7 @@ class TypedCartTest
 
     val childInbox = testKit.childInbox[TypedCheckout.Command]("CheckoutActor")
     childInbox.expectMessage(TypedCheckout.StartCheckout)
-    inbox.expectMessage(_: TypedOrderManager.ConfirmCheckoutStarted)
+    inbox.expectMessage(_: TypedCartActor.CheckoutStarted)
   }
 
   it should "add item properly - async" in {
@@ -83,7 +83,7 @@ class TypedCartTest
 
     cartActor ! AddItem(item1)
     cartActor ! StartCheckout(probe.ref)
-    probe.expectMessageType[TypedOrderManager.ConfirmCheckoutStarted]
+    probe.expectMessageType[TypedCartActor.CheckoutStarted]
   }
 }
 

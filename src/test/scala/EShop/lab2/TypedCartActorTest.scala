@@ -1,12 +1,11 @@
 package EShop.lab2
 
-import EShop.lab3.TypedOrderManager
 import akka.actor.Cancellable
 import akka.actor.testkit.typed.scaladsl.{ActorTestKit, ScalaTestWithActorTestKit}
-import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import org.scalatest.flatspec.AnyFlatSpecLike
+import akka.actor.typed.{ActorRef, Behavior}
 import org.scalatest.BeforeAndAfterAll
+import org.scalatest.flatspec.AnyFlatSpecLike
 
 import scala.concurrent.duration._
 
@@ -14,8 +13,8 @@ class TypedCartActorTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike 
 
   override def afterAll: Unit = testKit.shutdownTestKit()
 
-  import TypedCartActorTest._
   import TypedCartActor._
+  import TypedCartActorTest._
 
   it should "change state after adding first item to the cart" in {
     val probe = testKit.createTestProbe[Any]()
@@ -77,7 +76,7 @@ class TypedCartActorTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike 
     probe.expectMessage(nonEmptyMsg)
     probe.expectMessage(1)
 
-    cart ! StartCheckout(testKit.createTestProbe[TypedOrderManager.Command]().ref)
+    cart ! StartCheckout(testKit.createTestProbe[TypedCartActor.Event]().ref)
 
     probe.expectMessage(inCheckoutMsg)
     probe.expectMessage(1)
@@ -95,7 +94,7 @@ class TypedCartActorTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike 
     probe.expectMessage(nonEmptyMsg)
     probe.expectMessage(1)
 
-    cart ! StartCheckout(testKit.createTestProbe[TypedOrderManager.Command]().ref)
+    cart ! StartCheckout(testKit.createTestProbe[TypedCartActor.Event]().ref)
 
     probe.expectMessage(inCheckoutMsg)
     probe.expectMessage(1)
@@ -118,7 +117,7 @@ class TypedCartActorTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike 
     probe.expectMessage(nonEmptyMsg)
     probe.expectMessage(1)
 
-    cart ! StartCheckout(testKit.createTestProbe[TypedOrderManager.Command]().ref)
+    cart ! StartCheckout(testKit.createTestProbe[TypedCartActor.Event]().ref)
 
     probe.expectMessage(inCheckoutMsg)
     probe.expectMessage(1)
@@ -141,7 +140,7 @@ class TypedCartActorTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike 
     probe.expectMessage(nonEmptyMsg)
     probe.expectMessage(1)
 
-    cart ! StartCheckout(testKit.createTestProbe[TypedOrderManager.Command]().ref)
+    cart ! StartCheckout(testKit.createTestProbe[TypedCartActor.Event]().ref)
 
     probe.expectMessage(inCheckoutMsg)
     probe.expectMessage(1)
@@ -158,7 +157,7 @@ class TypedCartActorTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike 
     probe.expectMessage(emptyMsg)
     probe.expectMessage(0)
 
-    cart ! StartCheckout(testKit.createTestProbe[TypedOrderManager.Command]().ref)
+    cart ! StartCheckout(testKit.createTestProbe[TypedCartActor.Event]().ref)
 
     probe.expectNoMessage()
   }
