@@ -9,7 +9,6 @@ import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
 import scala.concurrent.duration._
 
-
 class TypedCartTest
   extends ScalaTestWithActorTestKit
   with AnyFlatSpecLike

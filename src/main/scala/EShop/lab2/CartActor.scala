@@ -19,7 +19,13 @@ object CartActor {
   case object GetItems                 extends Command // command made to make testing easier
 
   sealed trait Event
-  case class CheckoutStarted(checkoutRef: ActorRef) extends Event
+  case class CheckoutStarted(checkoutRef: ActorRef, cart: Cart) extends Event
+  case class ItemAdded(itemId: Any, cart: Cart)                 extends Event
+  case class ItemRemoved(itemId: Any, cart: Cart)               extends Event
+  case object CartEmptied                                       extends Event
+  case object CartExpired                                       extends Event
+  case object CheckoutClosed                                    extends Event
+  case class CheckoutCancelled(cart: Cart)                      extends Event
 
   def props(): Props = Props(new CartActor())
 
@@ -35,7 +41,7 @@ class CartActor extends Actor {
 
   private def scheduleTimer: Cancellable = system.scheduler.scheduleOnce(cartTimerDuration, self, ExpireCart)
 
-  def receive: Receive = empty
+  def receive: Receive = ???
 
   def empty: Receive = LoggingReceive {
     case AddItem(item) => context.become(nonEmpty(Cart.empty.addItem(item), scheduleTimer))

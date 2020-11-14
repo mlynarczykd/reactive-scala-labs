@@ -2,7 +2,7 @@ package EShop.lab3
 
 import EShop.lab2.{Cart, CartActor}
 import akka.actor.ActorSystem
-import akka.testkit.{ImplicitSender, TestActorRef, TestKit}
+import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import akka.pattern.ask
 import akka.util.Timeout
 import org.scalatest.BeforeAndAfterAll
@@ -23,6 +23,7 @@ class CartTest
   import CartTest._
 
   implicit val timeout: Timeout = 1.second
+
 
   override def afterAll: Unit =
     TestKit.shutdownActorSystem(system)
