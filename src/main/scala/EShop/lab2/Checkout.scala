@@ -1,6 +1,7 @@
 package EShop.lab2
 
 import EShop.lab2.Checkout._
+import EShop.lab3.{OrderManager, Payment}
 import akka.actor.{Actor, ActorRef, Cancellable, Props}
 import akka.event.{Logging, LoggingReceive}
 
@@ -27,7 +28,7 @@ object Checkout {
   case object CheckOutClosed                   extends Event
   case class PaymentStarted(payment: ActorRef) extends Event
 
-  def props(cart: ActorRef) = Props(new Checkout(cart))
+  def props(cart: ActorRef): Props = Props(new Checkout(cart))
 
 }
 
@@ -57,7 +58,8 @@ class Checkout(
   }
 
   def selectingPaymentMethod(timer: Cancellable): Receive = LoggingReceive {
-    case SelectPayment(_) => timer.cancel()
+    case SelectPayment(payment) => timer.cancel()
+      sender ! OrderManager.ConfirmPaymentStarted(context.actorOf(Payment.props(payment, sender, self), "PaymentActor"))
       context.become(processingPayment(scheduler.scheduleOnce(paymentTimerDuration, self, ExpirePayment)))
     case ExpireCheckout => context.become(cancelled)
     case CancelCheckout => timer.cancel()
@@ -67,6 +69,7 @@ class Checkout(
 
   def processingPayment(timer: Cancellable): Receive = LoggingReceive {
     case ConfirmPaymentReceived => timer.cancel()
+      cartActor ! CartActor.ConfirmCheckoutClosed
       context.become(closed)
     case ExpirePayment => context.become(cancelled)
     case CancelCheckout => timer.cancel()
@@ -76,11 +79,11 @@ class Checkout(
 
   def cancelled: Receive = LoggingReceive {
     case message => log.info(s"Received unknown message: $message")
-      context.stop(self)
+//      context.stop(self)
   }
 
   def closed: Receive = LoggingReceive {
     case message => log.info(s"Received unknown message: $message")
-      context.stop(self)
+//      context.stop(self)
   }
 }
