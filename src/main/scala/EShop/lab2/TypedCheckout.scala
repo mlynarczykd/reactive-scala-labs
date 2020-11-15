@@ -1,5 +1,7 @@
 package EShop.lab2
 
+import java.time.Instant
+
 import EShop.lab3.{TypedOrderManager, TypedPayment}
 import akka.actor.Cancellable
 import akka.actor.typed.scaladsl.Behaviors
@@ -21,11 +23,11 @@ object TypedCheckout {
   case object ConfirmPaymentReceived                                                              extends Command
 
   sealed trait Event
-  case object CheckOutClosed                                         extends Event
-  case class PaymentStarted(payment: ActorRef[TypedPayment.Command]) extends Event
-  case object CheckoutStarted                                        extends Event
-  case object CheckoutCancelled                                      extends Event
-  case class DeliveryMethodSelected(method: String)                  extends Event
+  case object CheckoutClosed                                                             extends Event
+  case class PaymentStarted(payment: ActorRef[TypedPayment.Command], startTime: Instant) extends Event
+  case class CheckoutStarted(startTime: Instant)                                         extends Event
+  case object CheckoutCancelled                                                          extends Event
+  case class DeliveryMethodSelected(method: String)                                      extends Event
 
   sealed abstract class State(val timerOpt: Option[Cancellable])
   case object WaitingForStart                           extends State(None)
@@ -47,7 +49,8 @@ class TypedCheckout(
   def start: Behavior[TypedCheckout.Command] = Behaviors.receive { (context, message) =>
     message match {
       case StartCheckout => selectingDelivery(context.scheduleOnce(checkoutTimerDuration, context.self, ExpireCheckout))
-      case message => context.log.info(s"Received unknown message: $message")
+      case message =>
+        context.log.info(s"Received unknown message: $message")
         Behaviors.same
     }
   }
@@ -55,45 +58,55 @@ class TypedCheckout(
   def selectingDelivery(timer: Cancellable): Behavior[TypedCheckout.Command] = Behaviors.receive { (context, message) =>
     message match {
       case SelectDeliveryMethod(_) => selectingPaymentMethod(timer)
-      case ExpireCheckout => cancelled
-      case CancelCheckout => timer.cancel()
+      case ExpireCheckout          => cancelled
+      case CancelCheckout =>
+        timer.cancel()
         cancelled
-      case message => context.log.info(s"Received unknown message: $message")
+      case message =>
+        context.log.info(s"Received unknown message: $message")
         Behaviors.same
     }
   }
 
   def selectingPaymentMethod(timer: Cancellable): Behavior[TypedCheckout.Command] = Behaviors.receive {
-    case (context, SelectPayment(payment, orderManagerRef)) => timer.cancel()
+    case (context, SelectPayment(payment, orderManagerRef)) =>
+      timer.cancel()
       orderManagerRef ! TypedOrderManager.ConfirmPaymentStarted(
-        context.spawn(new TypedPayment(payment, orderManagerRef, context.self).start,
-          "PaymentActor"))
+        context.spawn(new TypedPayment(payment, orderManagerRef, context.self).start, "PaymentActor")
+      )
       processingPayment(context.scheduleOnce(paymentTimerDuration, context.self, ExpirePayment))
     case (_, ExpireCheckout) => cancelled
-    case (_, CancelCheckout) => timer.cancel()
+    case (_, CancelCheckout) =>
+      timer.cancel()
       cancelled
-    case (context, message) => context.log.info(s"Received unknown message: $message")
+    case (context, message) =>
+      context.log.info(s"Received unknown message: $message")
       Behaviors.same
   }
 
   def processingPayment(timer: Cancellable): Behavior[TypedCheckout.Command] = Behaviors.receive {
-    case (_, ConfirmPaymentReceived) => timer.cancel()
+    case (_, ConfirmPaymentReceived) =>
+      timer.cancel()
       cartActor ! TypedCartActor.ConfirmCheckoutClosed
       closed
     case (_, ExpirePayment) => cancelled
-    case (_, CancelCheckout) => timer.cancel()
+    case (_, CancelCheckout) =>
+      timer.cancel()
       cancelled
-    case (context, message) => context.log.info(s"Received unknown message: $message")
+    case (context, message) =>
+      context.log.info(s"Received unknown message: $message")
       Behaviors.same
   }
 
   def cancelled: Behavior[TypedCheckout.Command] = Behaviors.receive {
-    case (context, message) => context.log.info(s"Received unknown message: $message")
+    case (context, message) =>
+      context.log.info(s"Received unknown message: $message")
       Behaviors.same
   }
 
   def closed: Behavior[TypedCheckout.Command] = Behaviors.receive {
-    case (context, message) => context.log.info(s"Received unknown message: $message")
+    case (context, message) =>
+      context.log.info(s"Received unknown message: $message")
       Behaviors.same
   }
 
