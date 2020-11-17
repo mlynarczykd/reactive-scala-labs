@@ -1,12 +1,12 @@
 package EShop.lab2
 
+import EShop.lab3.TypedPayment
 import akka.actor.Cancellable
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 
-import scala.language.postfixOps
 import scala.concurrent.duration._
-import EShop.lab3.{TypedOrderManager, TypedPayment}
+import scala.language.postfixOps
 
 object TypedCheckout {
 
@@ -20,13 +20,14 @@ object TypedCheckout {
   case class SelectDeliveryMethod(method: String)                                                 extends Command
   case object CancelCheckout                                                                      extends Command
   case object ExpireCheckout                                                                      extends Command
-  case class SelectPayment(payment: String, orderManagerRef: ActorRef[TypedOrderManager.Command]) extends Command
+  case class SelectPayment(payment: String, orderManagerCheckoutRef: ActorRef[Event],
+                           orderManagerPaymentRef: ActorRef[TypedPayment.Event])                  extends Command
   case object ExpirePayment                                                                       extends Command
   case object ConfirmPaymentReceived                                                              extends Command
 
   sealed trait Event
   case object CheckOutClosed                           extends Event
-  case class PaymentStarted(paymentRef: ActorRef[Any]) extends Event
+  case class PaymentStarted(paymentRef: ActorRef[TypedPayment.Command]) extends Event
 }
 
 class TypedCheckout(
@@ -57,9 +58,9 @@ class TypedCheckout(
   }
 
   def selectingPaymentMethod(timer: Cancellable): Behavior[TypedCheckout.Command] = Behaviors.receive {
-    case (context, SelectPayment(payment, orderManagerRef)) => timer.cancel()
-      orderManagerRef ! TypedOrderManager.ConfirmPaymentStarted(
-        context.spawn(new TypedPayment(payment, orderManagerRef, context.self).start,
+    case (context, SelectPayment(payment, orderManagerCheckoutRef, orderManagerPaymentRef)) => timer.cancel()
+      orderManagerCheckoutRef ! PaymentStarted(
+        context.spawn(new TypedPayment(payment, orderManagerPaymentRef, context.self).start,
           "PaymentActor"))
       processingPayment(context.scheduleOnce(paymentTimerDuration, context.self, ExpirePayment))
     case (_, ExpireCheckout) => cancelled

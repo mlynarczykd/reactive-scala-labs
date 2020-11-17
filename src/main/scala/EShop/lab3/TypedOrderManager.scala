@@ -1,7 +1,7 @@
 package EShop.lab3
 
 import EShop.lab2.{TypedCartActor, TypedCheckout}
-import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
 
 object TypedOrderManager {
@@ -18,11 +18,30 @@ object TypedOrderManager {
 
   sealed trait Ack
   case object Done extends Ack //trivial ACK
+
+  def apply(): Behavior[TypedOrderManager.Command] = Behaviors.setup { context =>
+    new TypedOrderManager(context).start
+  }
 }
 
-class TypedOrderManager {
+class TypedOrderManager(context: ActorContext[TypedOrderManager.Command]) {
 
   import TypedOrderManager._
+
+  val cartEventMapper: ActorRef[TypedCartActor.Event] =
+    context.messageAdapter {
+      case TypedCartActor.CheckoutStarted(checkoutRef) => ConfirmCheckoutStarted(checkoutRef)
+    }
+
+  val checkoutEventMapper: ActorRef[TypedCheckout.Event] =
+    context.messageAdapter {
+      case TypedCheckout.PaymentStarted(paymentRef) => ConfirmPaymentStarted(paymentRef)
+    }
+
+  val paymentEventMapper: ActorRef[TypedPayment.Event] =
+    context.messageAdapter {
+      case TypedPayment.ReceivedPayment => ConfirmPaymentReceived
+    }
 
   def start: Behavior[TypedOrderManager.Command] = uninitialized
 
@@ -50,7 +69,7 @@ class TypedOrderManager {
     senderRef: ActorRef[Ack]
   ): Behavior[TypedOrderManager.Command] =
     Behaviors.setup { context =>
-      cartActorRef ! TypedCartActor.StartCheckout(context.self)
+      cartActorRef ! TypedCartActor.StartCheckout(cartEventMapper)
       Behaviors.receiveMessage {
         case ConfirmCheckoutStarted(checkoutRef) =>
           senderRef ! Done
@@ -64,7 +83,7 @@ class TypedOrderManager {
     message match {
       case SelectDeliveryAndPaymentMethod(delivery, payment, sender) =>
         checkoutActorRef ! TypedCheckout.SelectDeliveryMethod(delivery)
-        checkoutActorRef ! TypedCheckout.SelectPayment(payment, context.self)
+        checkoutActorRef ! TypedCheckout.SelectPayment(payment, checkoutEventMapper, paymentEventMapper)
         inPayment(sender)
       case message => context.log.info(s"Received unknown message: $message")
         Behaviors.same

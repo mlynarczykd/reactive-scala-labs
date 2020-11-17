@@ -1,12 +1,12 @@
 package EShop.lab2
 
-import EShop.lab3.TypedOrderManager
-import akka.actor.testkit.typed.scaladsl.{ActorTestKit, ScalaTestWithActorTestKit}
-import akka.actor.typed.{ActorRef, Behavior}
+import EShop.lab3.TypedPayment
 import akka.actor.Cancellable
+import akka.actor.testkit.typed.scaladsl.{ActorTestKit, ScalaTestWithActorTestKit}
 import akka.actor.typed.scaladsl.Behaviors
-import org.scalatest.flatspec.AnyFlatSpecLike
+import akka.actor.typed.{ActorRef, Behavior}
 import org.scalatest.BeforeAndAfterAll
+import org.scalatest.flatspec.AnyFlatSpecLike
 
 import scala.concurrent.duration.{FiniteDuration, _}
 
@@ -17,8 +17,8 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
 
   override def afterAll: Unit = testKit.shutdownTestKit()
 
-  import TypedCheckoutTest._
   import TypedCheckout._
+  import TypedCheckoutTest._
 
   it should "be in selectingDelivery state after checkout start" in {
     val probe          = testKit.createTestProbe[String]
@@ -91,7 +91,8 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
 
   it should "be in cancelled state after expire checkout timeout in selectingPayment state" in {
     val probe             = testKit.createTestProbe[String]
-    val orderManagerProbe = testKit.createTestProbe[TypedOrderManager.Command]
+    val orderManagerCheckoutProbe = testKit.createTestProbe[Event]
+    val orderManagerPaymentProbe = testKit.createTestProbe[TypedPayment.Event]
     val checkoutActor = testKit.spawn {
       val checkout = new TypedCheckout(testKit.createTestProbe[TypedCartActor.Command]().ref) {
         override val checkoutTimerDuration: FiniteDuration = 1.seconds
@@ -108,14 +109,15 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
     checkoutActor ! StartCheckout
     checkoutActor ! SelectDeliveryMethod(deliveryMethod)
     Thread.sleep(2000)
-    checkoutActor ! SelectPayment(paymentMethod, orderManagerProbe.ref)
+    checkoutActor ! SelectPayment(paymentMethod, orderManagerCheckoutProbe.ref, orderManagerPaymentProbe.ref)
     probe.expectMessage(cancelledMsg)
   }
 
   it should "be in processingPayment state after payment selected" in {
     val probe             = testKit.createTestProbe[String]
     val cartActorProbe    = testKit.createTestProbe[TypedCartActor.Command]
-    val orderManagerProbe = testKit.createTestProbe[TypedOrderManager.Command]
+    val orderManagerCheckoutProbe = testKit.createTestProbe[Event]
+    val orderManagerPaymentProbe = testKit.createTestProbe[TypedPayment.Event]
     val checkoutActor     = checkoutActorWithResponseOnStateChange(testKit, probe.ref, cartActorProbe.ref)
 
     probe.expectMessage(emptyMsg)
@@ -123,14 +125,15 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
     probe.expectMessage(selectingDeliveryMsg)
     checkoutActor ! SelectDeliveryMethod(deliveryMethod)
     probe.expectMessage(selectingPaymentMethodMsg)
-    checkoutActor ! SelectPayment(paymentMethod, orderManagerProbe.ref)
+    checkoutActor ! SelectPayment(paymentMethod, orderManagerCheckoutProbe.ref, orderManagerPaymentProbe.ref)
     probe.expectMessage(processingPaymentMsg)
   }
 
   it should "be in cancelled state after cancel message received in processingPayment State" in {
     val probe             = testKit.createTestProbe[String]
     val cartActorProbe    = testKit.createTestProbe[TypedCartActor.Command]
-    val orderManagerProbe = testKit.createTestProbe[TypedOrderManager.Command]
+    val orderManagerCheckoutProbe = testKit.createTestProbe[Event]
+    val orderManagerPaymentProbe = testKit.createTestProbe[TypedPayment.Event]
     val checkoutActor     = checkoutActorWithResponseOnStateChange(testKit, probe.ref, cartActorProbe.ref)
 
     probe.expectMessage(emptyMsg)
@@ -138,7 +141,7 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
     probe.expectMessage(selectingDeliveryMsg)
     checkoutActor ! SelectDeliveryMethod(deliveryMethod)
     probe.expectMessage(selectingPaymentMethodMsg)
-    checkoutActor ! SelectPayment(paymentMethod, orderManagerProbe.ref)
+    checkoutActor ! SelectPayment(paymentMethod, orderManagerCheckoutProbe.ref, orderManagerPaymentProbe.ref)
     probe.expectMessage(processingPaymentMsg)
     checkoutActor ! CancelCheckout
     probe.expectMessage(cancelledMsg)
@@ -146,7 +149,8 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
 
   it should "be in cancelled state after expire checkout timeout in processingPayment state" in {
     val probe             = testKit.createTestProbe[String]
-    val orderManagerProbe = testKit.createTestProbe[TypedOrderManager.Command]
+    val orderManagerCheckoutProbe = testKit.createTestProbe[Event]
+    val orderManagerPaymentProbe = testKit.createTestProbe[TypedPayment.Event]
     val checkoutActor = testKit.spawn {
       val checkout = new TypedCheckout(testKit.createTestProbe[TypedCartActor.Command]().ref) {
         override val paymentTimerDuration: FiniteDuration = 1.seconds
@@ -162,7 +166,7 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
 
     checkoutActor ! StartCheckout
     checkoutActor ! SelectDeliveryMethod(deliveryMethod)
-    checkoutActor ! SelectPayment(paymentMethod, orderManagerProbe.ref)
+    checkoutActor ! SelectPayment(paymentMethod, orderManagerCheckoutProbe.ref, orderManagerPaymentProbe.ref)
     Thread.sleep(2000)
     checkoutActor ! ConfirmPaymentReceived
     probe.expectMessage(cancelledMsg)
@@ -171,7 +175,8 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
   it should "be in closed state after payment completed" in {
     val probe             = testKit.createTestProbe[String]()
     val cartActorProbe    = testKit.createTestProbe[TypedCartActor.Command]
-    val orderManagerProbe = testKit.createTestProbe[TypedOrderManager.Command]
+    val orderManagerCheckoutProbe = testKit.createTestProbe[Event]
+    val orderManagerPaymentProbe = testKit.createTestProbe[TypedPayment.Event]
     val checkoutActor     = checkoutActorWithResponseOnStateChange(testKit, probe.ref, cartActorProbe.ref)
 
     probe.expectMessage(emptyMsg)
@@ -179,7 +184,7 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
     probe.expectMessage(selectingDeliveryMsg)
     checkoutActor ! SelectDeliveryMethod(deliveryMethod)
     probe.expectMessage(selectingPaymentMethodMsg)
-    checkoutActor ! SelectPayment(paymentMethod, orderManagerProbe.ref)
+    checkoutActor ! SelectPayment(paymentMethod, orderManagerCheckoutProbe.ref, orderManagerPaymentProbe.ref)
     probe.expectMessage(processingPaymentMsg)
     checkoutActor ! ConfirmPaymentReceived
     probe.expectMessage(closedMsg)
@@ -188,7 +193,8 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
   it should "not change state after cancel msg in completed state" in {
     val probe             = testKit.createTestProbe[String]()
     val cartActorProbe    = testKit.createTestProbe[TypedCartActor.Command]
-    val orderManagerProbe = testKit.createTestProbe[TypedOrderManager.Command]
+    val orderManagerCheckoutProbe = testKit.createTestProbe[Event]
+    val orderManagerPaymentProbe = testKit.createTestProbe[TypedPayment.Event]
     val checkoutActor     = checkoutActorWithResponseOnStateChange(testKit, probe.ref, cartActorProbe.ref)
 
     probe.expectMessage(emptyMsg)
@@ -196,7 +202,7 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
     probe.expectMessage(selectingDeliveryMsg)
     checkoutActor ! SelectDeliveryMethod(deliveryMethod)
     probe.expectMessage(selectingPaymentMethodMsg)
-    checkoutActor ! SelectPayment(paymentMethod, orderManagerProbe.ref)
+    checkoutActor ! SelectPayment(paymentMethod, orderManagerCheckoutProbe.ref, orderManagerPaymentProbe.ref)
     probe.expectMessage(processingPaymentMsg)
     checkoutActor ! ConfirmPaymentReceived
     probe.expectMessage(closedMsg)
