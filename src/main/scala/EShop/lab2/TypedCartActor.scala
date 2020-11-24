@@ -1,7 +1,6 @@
 package EShop.lab2
 
 import java.time.Instant
-
 import EShop.lab3.TypedOrderManager
 import akka.actor.Cancellable
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
@@ -17,6 +16,8 @@ object TypedCartActor {
   case class RemoveItem(item: Any)                                               extends Command
   case object ExpireCart                                                         extends Command
   case class StartCheckout(orderManagerRef: ActorRef[TypedOrderManager.Command]) extends Command
+  case object CancelCheckout                                                     extends Command
+  case object CloseCheckout                                                      extends Command
   case object ConfirmCheckoutCancelled                                           extends Command
   case object ConfirmCheckoutClosed                                              extends Command
   case class GetItems(sender: ActorRef[Cart])                                    extends Command

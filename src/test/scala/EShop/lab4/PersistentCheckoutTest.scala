@@ -1,9 +1,11 @@
 package EShop.lab4
 
-import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
-import akka.testkit.{ImplicitSender, TestKit}
-import org.scalatest.BeforeAndAfterAll
+import EShop.lab2.Checkout._
+import EShop.lab3.OrderManager
+import akka.actor.{ActorRef, ActorSystem, Cancellable, PoisonPill, Props}
+import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import org.scalatest.flatspec.AnyFlatSpecLike
+import org.scalatest.BeforeAndAfterAll
 
 import scala.util.Random
 

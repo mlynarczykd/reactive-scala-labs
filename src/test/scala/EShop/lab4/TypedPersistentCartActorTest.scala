@@ -1,13 +1,13 @@
 package EShop.lab4
 
-import EShop.lab2.Cart
 import EShop.lab3.TypedOrderManager
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
-import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit.SerializationSettings
 import akka.persistence.typed.PersistenceId
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit.SerializationSettings
+import EShop.lab2.Cart
 
 import scala.concurrent.duration._
 import scala.util.Random
@@ -160,7 +160,7 @@ class TypedPersistentCartActorTest
     resultAdd2.state shouldBe Empty
   }
 
-  it should "change contain added item after restart" in {
+    it should "change contain added item after restart" in {
     val result = eventSourcedTestKit.runCommand(AddItem("Hamlet"))
 
     result.event.isInstanceOf[ItemAdded] shouldBe true

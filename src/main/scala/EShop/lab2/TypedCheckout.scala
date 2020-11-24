@@ -1,7 +1,6 @@
 package EShop.lab2
 
 import java.time.Instant
-
 import EShop.lab3.{TypedOrderManager, TypedPayment}
 import akka.actor.Cancellable
 import akka.actor.typed.scaladsl.Behaviors

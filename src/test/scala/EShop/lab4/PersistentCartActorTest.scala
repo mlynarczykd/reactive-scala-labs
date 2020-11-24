@@ -1,10 +1,12 @@
 package EShop.lab4
 
 import EShop.lab2.Cart
-import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
+import EShop.lab2.CartActor.{AddItem, CancelCheckout, CloseCheckout, RemoveItem, StartCheckout}
+import EShop.lab3.OrderManager
+import akka.actor.{ActorRef, ActorSystem, Cancellable, PoisonPill, Props}
 import akka.testkit.{ImplicitSender, TestKit}
-import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpecLike
+import org.scalatest.BeforeAndAfterAll
 
 import scala.concurrent.duration._
 import scala.util.Random
