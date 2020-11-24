@@ -21,8 +21,8 @@ class CheckoutTest
   override def afterAll: Unit =
     TestKit.shutdownActorSystem(system)
 
-  it should "Send close confirmation to cart" in {
-    ???
-  }
+//  it should "Send close confirmation to cart" in {
+//    ???
+//  }
 
 }
