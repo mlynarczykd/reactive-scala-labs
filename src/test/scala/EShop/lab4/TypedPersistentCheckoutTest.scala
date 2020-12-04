@@ -142,7 +142,7 @@ class TypedPersistentCheckoutTest
     val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, orderManagerProbe.ref))
 
     resultSelectPayment.event.isInstanceOf[PaymentStarted] shouldBe true
-    resultSelectPayment.state.isInstanceOf[ProcessingPayment] shouldBe true
+    resultSelectPayment.state.isInstanceOf[ConfirmPaymentReceived] shouldBe true
   }
 
   it should "be in cancelled state after cancel message received in processingPayment State" in {
@@ -159,7 +159,7 @@ class TypedPersistentCheckoutTest
     val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, orderManagerProbe.ref))
 
     resultSelectPayment.event.isInstanceOf[PaymentStarted] shouldBe true
-    resultSelectPayment.state.isInstanceOf[ProcessingPayment] shouldBe true
+    resultSelectPayment.state.isInstanceOf[ConfirmPaymentReceived] shouldBe true
 
     val resultCancelCheckout = eventSourcedTestKit.runCommand(CancelCheckout)
 
@@ -181,7 +181,7 @@ class TypedPersistentCheckoutTest
     val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, orderManagerProbe.ref))
 
     resultSelectPayment.event.isInstanceOf[PaymentStarted] shouldBe true
-    resultSelectPayment.state.isInstanceOf[ProcessingPayment] shouldBe true
+    resultSelectPayment.state.isInstanceOf[ConfirmPaymentReceived] shouldBe true
 
     Thread.sleep(2000)
 
@@ -205,7 +205,7 @@ class TypedPersistentCheckoutTest
     val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, orderManagerProbe.ref))
 
     resultSelectPayment.event.isInstanceOf[PaymentStarted] shouldBe true
-    resultSelectPayment.state.isInstanceOf[ProcessingPayment] shouldBe true
+    resultSelectPayment.state.isInstanceOf[ConfirmPaymentReceived] shouldBe true
 
     val resultReceivePayment = eventSourcedTestKit.runCommand(ConfirmPaymentReceived)
 
@@ -228,7 +228,7 @@ class TypedPersistentCheckoutTest
     val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, orderManagerProbe.ref))
 
     resultSelectPayment.event.isInstanceOf[PaymentStarted] shouldBe true
-    resultSelectPayment.state.isInstanceOf[ProcessingPayment] shouldBe true
+    resultSelectPayment.state.isInstanceOf[ConfirmPaymentReceived] shouldBe true
 
     val resultReceivePayment = eventSourcedTestKit.runCommand(ConfirmPaymentReceived)
 

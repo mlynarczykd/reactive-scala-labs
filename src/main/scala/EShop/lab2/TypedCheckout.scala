@@ -6,6 +6,7 @@ import EShop.lab3.{TypedOrderManager, TypedPayment}
 import akka.actor.Cancellable
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
+import cats.implicits.catsSyntaxOptionId
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
