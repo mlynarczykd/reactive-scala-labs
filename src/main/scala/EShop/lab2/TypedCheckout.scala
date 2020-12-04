@@ -1,14 +1,14 @@
 package EShop.lab2
 
 import java.time.Instant
+
 import EShop.lab3.{TypedOrderManager, TypedPayment}
 import akka.actor.Cancellable
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
-import cats.implicits.catsSyntaxOptionId
 
-import scala.language.postfixOps
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 object TypedCheckout {
 
@@ -30,11 +30,11 @@ object TypedCheckout {
 
   sealed abstract class State(val timerOpt: Option[Cancellable])
   case object WaitingForStart                           extends State(None)
-  case class SelectingDelivery(timer: Cancellable)      extends State(timer.some)
-  case class SelectingPaymentMethod(timer: Cancellable) extends State(timer.some)
+  case class SelectingDelivery(timer: Cancellable)      extends State(Some(timer))
+  case class SelectingPaymentMethod(timer: Cancellable) extends State(Some(timer))
   case object Closed                                    extends State(None)
   case object Cancelled                                 extends State(None)
-  case class ProcessingPayment(timer: Cancellable)      extends State(timer.some)
+  case class ProcessingPayment(timer: Cancellable)      extends State(Some(timer))
 }
 
 class TypedCheckout(
