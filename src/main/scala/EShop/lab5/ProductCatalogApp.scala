@@ -3,6 +3,8 @@ import java.net.URI
 import java.util.zip.GZIPInputStream
 
 import akka.actor.{Actor, ActorSystem, Props}
+import akka.cluster.pubsub.DistributedPubSub
+import akka.cluster.pubsub.DistributedPubSubMediator.Publish
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.Await
@@ -55,6 +57,11 @@ object ProductCatalog {
   sealed trait Ack
   case class Items(items: List[Item]) extends Ack
 
+  sealed trait Event
+  case class GotQuery(getItems: GetItems, actorRef: String)
+
+  val topic = "catalog"
+
   def props(searchService: SearchService): Props =
     Props(new ProductCatalog(searchService))
 }
@@ -63,8 +70,11 @@ class ProductCatalog(searchService: SearchService) extends Actor {
 
   import ProductCatalog._
 
+  private val mediator = DistributedPubSub(context.system).mediator
+
   override def receive: Receive = {
     case GetItems(brand, productKeyWords) =>
+      mediator ! Publish(topic, GotQuery(GetItems(brand, productKeyWords), self.toString))
       sender() ! Items(searchService.search(brand, productKeyWords))
   }
 }

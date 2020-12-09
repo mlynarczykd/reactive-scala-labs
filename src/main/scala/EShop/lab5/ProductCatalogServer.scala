@@ -2,13 +2,15 @@ package EShop.lab5
 
 import java.net.URI
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, OneForOneStrategy, SupervisorStrategy}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.server.Directives._
+import akka.pattern.ask
+import akka.routing.RoundRobinPool
 import akka.util.Timeout
 import spray.json.{DefaultJsonProtocol, JsString, JsValue, JsonFormat, PrettyPrinter, RootJsonFormat}
-import akka.pattern.ask
+
 import scala.concurrent.duration.{Duration, _}
 import scala.concurrent.{Await, ExecutionContextExecutor}
 import scala.util.{Failure, Success}
@@ -21,36 +23,45 @@ trait ProductCatalogJsonSupport extends SprayJsonSupport with DefaultJsonProtoco
 
     override def read(json: JsValue): URI = json match {
       case JsString(url) => new URI(url)
-      case _ => throw new RuntimeException("Parsing exception")
+      case _             => throw new RuntimeException("Parsing exception")
     }
   }
 
-  implicit val itemFormat: RootJsonFormat[ProductCatalog.Item] = jsonFormat5(ProductCatalog.Item)
+  implicit val itemFormat: RootJsonFormat[ProductCatalog.Item]   = jsonFormat5(ProductCatalog.Item)
   implicit val itemsFormat: RootJsonFormat[ProductCatalog.Items] = jsonFormat1(ProductCatalog.Items)
 }
 
 private object ProductCatalogServer {
-  val host = "localhost"
-  val port = 8080
+  val host                    = "localhost"
+  val port                    = 8080
   val productCatalogActorPath = "akka.tcp://ProductCatalog@127.0.0.1:2553/user/productcatalog"
 }
 
 class ProductCatalogServer extends ProductCatalogJsonSupport {
   import ProductCatalogServer._
 
-  private implicit val system: ActorSystem = ActorSystem("ProductCatalogServer")
+  private implicit val system: ActorSystem                        = ActorSystem("ProductCatalogServer")
   private implicit val executionContext: ExecutionContextExecutor = system.dispatcher
-  private implicit val timeout: Timeout = 5.seconds
-  private val logger = system.log
+  private implicit val timeout: Timeout                           = 5.seconds
+  private val logger                                              = system.log
 
-  private lazy val productCatalogActor = system.actorSelection(productCatalogActorPath)
+  private val productCatalogs =
+    system.actorOf(
+      RoundRobinPool(
+        10,
+        supervisorStrategy = OneForOneStrategy() {
+          case _ => SupervisorStrategy.Escalate
+        }
+      ).props(ProductCatalog.props(new SearchService())),
+      "catalogsRouter"
+    )
 
   private lazy val routes =
     pathPrefix("product") {
       parameters('brand, 'keywords) { (brand, keywords) =>
         get {
           val keywordsList = keywords.split(",").toList
-          val future = productCatalogActor ? ProductCatalog.GetItems(brand, keywordsList)
+          val future       = productCatalogs ? ProductCatalog.GetItems(brand, keywordsList)
           onSuccess(future) {
             case items: ProductCatalog.Items => complete(items)
           }
@@ -63,7 +74,9 @@ class ProductCatalogServer extends ProductCatalogJsonSupport {
 
     binding.onComplete {
       case Success(bound) =>
-        logger.info(s"Server online at http://${bound.localAddress.getHostString}:${bound.localAddress.getPort}/product")
+        logger.info(
+          s"Server online at http://${bound.localAddress.getHostString}:${bound.localAddress.getPort}/product"
+        )
         scala.io.StdIn.readLine
         binding.flatMap(_.unbind).onComplete(_ => system.terminate)
       case Failure(e) =>
